@@ -5,9 +5,11 @@ from django.core.exceptions import ImproperlyConfigured
 from django.db.models.base import ModelBase
 from django.views.decorators.cache import never_cache
 import inspect
+from django.utils import six
 
-reload(sys)
-sys.setdefaultencoding("utf-8")
+if six.PY2:
+    reload(sys)
+    sys.setdefaultencoding("utf-8")
 
 
 class AlreadyRegistered(Exception):
@@ -166,10 +168,22 @@ class AdminSite(object):
         if not ContentType._meta.installed:
             raise ImproperlyConfigured("Put 'django.contrib.contenttypes' in "
                                        "your INSTALLED_APPS setting in order to use the admin application.")
-        if not ('django.contrib.auth.context_processors.auth' in settings.TEMPLATE_CONTEXT_PROCESSORS or
-                'django.core.context_processors.auth' in settings.TEMPLATE_CONTEXT_PROCESSORS):
-            raise ImproperlyConfigured("Put 'django.contrib.auth.context_processors.auth' "
-                                       "in your TEMPLATE_CONTEXT_PROCESSORS setting in order to use the admin application.")
+
+        if not getattr(settings, 'TEMPLATES'):
+            raise ImproperlyConfigured("Need set TEMPLATES settings")
+
+        for templates_setting in settings.TEMPLATES:
+            if templates_setting.get('BACKEND') != 'django.template.backends.django.DjangoTemplates':
+                continue
+
+            options = templates_setting.get('OPTIONS', dict())
+            context_processors = options.get('context_processors', list())
+
+            if not ('django.contrib.auth.context_processors.auth' in context_processors or
+                    'django.core.context_processors.auth' in context_processors):
+                raise ImproperlyConfigured("Put 'django.contrib.auth.context_processors.auth' "
+                                           "in your template context_processors(TEMPLATES) setting in order to use "
+                                           "the admin application.")
 
     def admin_view(self, view, cacheable=False):
         """
@@ -264,7 +278,7 @@ class AdminSite(object):
             if settings_class:
                 merges.append(settings_class)
             merges.append(klass)
-        new_class_name = ''.join([c.__name__ for c in merges])
+        new_class_name = '.'.join(reversed([c.__name__ for c in merges]))
 
         if new_class_name not in self._admin_view_cache:
             plugins = self.get_plugins(view_class, option_class)
@@ -306,7 +320,7 @@ class AdminSite(object):
             ]
 
         # Add in each model's views.
-        for model, admin_class in self._registry.iteritems():
+        for model, admin_class in six.iteritems(self._registry):
             view_urls = [url(
                 path, wrap(
                     self.create_model_admin_view(clz, model, admin_class)),

@@ -1,4 +1,5 @@
 
+from django.utils import six
 from django.template import loader
 from django.core.urlresolvers import reverse
 from django.utils.translation import ugettext_lazy as _
@@ -19,6 +20,7 @@ from xadmin.filters import FILTER_PREFIX, SEARCH_VAR
 from xadmin.plugins.relate import RELATE_PREFIX
 
 from xadmin.models import Bookmark
+
 
 csrf_protect_m = method_decorator(csrf_protect)
 
@@ -188,7 +190,7 @@ class BookmarkWidget(PartialBaseWidget):
         self.bookmark = bookmark
 
         if not self.title:
-            self.title = unicode(bookmark)
+            self.title = six.u(bookmark)
 
         req = self.make_get_request("", data.items())
         self.list_view = self.get_view_class(

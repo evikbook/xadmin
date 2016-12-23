@@ -226,6 +226,13 @@
 
   $.fn.exform.renders.push(function(f){
     f.find('a.btn-ajax').ajax_addbtn()
-  })
+  });
+
+  $(document.body).on('change', 'select', function () {
+      var a = $('.related-info[data-for-id="' + $(this).attr('id') + '"]');
+      if (a.length > 0)
+        a.attr('href', a.attr('data-base-url').replace('ID', $(this).val()));
+
+  });
 
 })(jQuery)

@@ -19,6 +19,9 @@
       {% if formset.formset.can_delete %}
         <a class="delete-row pull-right"><i class="fa fa-times"></i></a>
       {% endif %}
+      {% if fs.detail_link %}
+          <a class="pull-right" style="margin: 8px 8px;" href="{{ fs.detail_link }}" target="_blank"><i class="fa fa-eye"></i></a>
+      {% endif %}
       {% crispy fs formset.formset.helper %}
     </div>
   {% endfor %}

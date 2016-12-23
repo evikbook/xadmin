@@ -9,7 +9,12 @@ from django.forms.models import modelform_factory
 from django.http import Http404
 from django.template import loader
 from django.template.response import TemplateResponse
-from django.utils.encoding import force_unicode, smart_unicode
+from django.utils import six
+if six.PY3:
+    from django.utils.encoding import force_text as force_unicode, \
+        smart_text as smart_unicode
+else:
+    from django.utils.encoding import force_unicode, smart_unicode
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext as _
@@ -17,7 +22,7 @@ from django.utils.html import conditional_escape
 from xadmin.layout import FormHelper, Layout, Fieldset, Container, Column, Field, Col, TabHolder
 from xadmin.util import unquote, lookup_field, display_for_field, boolean_icon, label_for_field
 
-from base import ModelAdminView, filter_hook, csrf_protect_m
+from .base import ModelAdminView, filter_hook, csrf_protect_m
 
 # Text to display within change-list table cells if the value is blank.
 EMPTY_CHANGELIST_VALUE = _('Null')
@@ -81,24 +86,23 @@ class ResultField(object):
             f, attr, value = lookup_field(
                 self.field_name, self.obj, self.admin_view)
         except (AttributeError, ObjectDoesNotExist):
-            self.text
-        else:
-            if f is None:
-                self.allow_tags = getattr(attr, 'allow_tags', False)
-                boolean = getattr(attr, 'boolean', False)
-                if boolean:
-                    self.allow_tags = True
-                    self.text = boolean_icon(value)
-                else:
-                    self.text = smart_unicode(value)
+            return
+        if f is None:
+            self.allow_tags = getattr(attr, 'allow_tags', False)
+            boolean = getattr(attr, 'boolean', False)
+            if boolean:
+                self.allow_tags = True
+                self.text = boolean_icon(value)
             else:
-                if isinstance(f.rel, models.ManyToOneRel):
-                    self.text = getattr(self.obj, f.name)
-                else:
-                    self.text = display_for_field(value, f)
-            self.field = f
-            self.attr = attr
-            self.value = value
+                self.text = smart_unicode(value)
+        else:
+            if isinstance(f.rel, models.ManyToOneRel):
+                self.text = getattr(self.obj, f.name)
+            else:
+                self.text = display_for_field(value, f)
+        self.field = f
+        self.attr = attr
+        self.value = value
 
     @property
     def val(self):
@@ -117,7 +121,7 @@ def replace_field_to_value(layout, cb):
         if isinstance(lo, Field) or issubclass(lo.__class__, Field):
             layout.fields[i] = ShowField(
                 cb, *lo.fields, attrs=lo.attrs, wrapper_class=lo.wrapper_class)
-        elif isinstance(lo, basestring):
+        elif isinstance(lo, six.string_types):
             layout.fields[i] = ShowField(cb, lo)
         elif hasattr(lo, 'get_field_names'):
             replace_field_to_value(lo, cb)

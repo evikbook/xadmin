@@ -9,7 +9,12 @@ from django.forms.utils import flatatt
 from django.template import loader
 from django.http import Http404
 from django.test.client import RequestFactory
-from django.utils.encoding import force_unicode, smart_unicode
+from django.utils import six
+if six.PY3:
+    from django.utils.encoding import force_text as force_unicode, \
+        smart_text as smart_unicode
+else:
+    from django.utils.encoding import force_unicode, smart_unicode
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext as _
@@ -436,7 +441,6 @@ class ListWidget(ModelBaseWidget, PartialBaseWidget):
     def context(self, context):
         list_view = self.list_view
         list_view.make_result_list()
-
         base_fields = list_view.base_list_display
         if len(base_fields) > 5:
             base_fields = base_fields[0:5]
@@ -558,7 +562,7 @@ class Dashboard(CommAdminView):
                                 widget = user_widgets.get(int(wid))
                                 if widget:
                                     ws.append(self.get_widget(widget))
-                            except Exception, e:
+                            except Exception as e:
                                 import logging
                                 logging.error(e, exc_info=True)
                         widgets.append(ws)

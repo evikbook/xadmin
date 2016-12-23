@@ -8,7 +8,12 @@ from django.db import models, transaction
 from django.forms.models import modelform_factory, modelform_defines_fields
 from django.http import Http404, HttpResponseRedirect
 from django.template.response import TemplateResponse
-from django.utils.encoding import force_unicode
+from django.utils import six
+if six.PY3:
+    from django.utils.encoding import force_text as force_unicode
+else:
+    from django.utils.encoding import force_unicode
+
 from django.utils.html import escape
 from django.utils.text import capfirst, get_text_list
 from django.template import loader
@@ -18,7 +23,7 @@ from xadmin.layout import FormHelper, Layout, Fieldset, TabHolder, Container, Co
 from xadmin.util import unquote
 from xadmin.views.detail import DetailAdminUtil
 
-from base import ModelAdminView, filter_hook, csrf_protect_m
+from .base import ModelAdminView, filter_hook, csrf_protect_m
 
 
 FORMFIELD_FOR_DBFIELD_DEFAULTS = {
@@ -190,7 +195,7 @@ class ModelFormAdminView(ModelAdminView):
     @filter_hook
     def get_form_layout(self):
         layout = copy.deepcopy(self.form_layout)
-        fields = self.form_obj.fields.keys() + list(self.get_readonly_fields())
+        fields = list(self.form_obj.fields.keys()) + list(self.get_readonly_fields())
 
         if layout is None:
             layout = Layout(Container(Col('full',
@@ -287,7 +292,7 @@ class ModelFormAdminView(ModelAdminView):
             self.save_models()
             self.save_related()
             response = self.post_response()
-            if isinstance(response, basestring):
+            if isinstance(response, six.string_types):
                 return HttpResponseRedirect(response)
             else:
                 return response
@@ -407,7 +412,7 @@ class CreateAdminView(ModelFormAdminView):
         return TemplateResponse(
             self.request, self.add_form_template or self.get_template_list(
                 'views/model_form.html'),
-            context, current_app=self.admin_site.name)
+            context)
 
     @filter_hook
     def post_response(self):
@@ -494,7 +499,7 @@ class UpdateAdminView(ModelFormAdminView):
         return TemplateResponse(
             self.request, self.change_form_template or self.get_template_list(
                 'views/model_form.html'),
-            context, current_app=self.admin_site.name)
+            context)
 
     def post(self, request, *args, **kwargs):
         if "_saveasnew" in self.request.POST:

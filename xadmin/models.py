@@ -8,7 +8,11 @@ from django.utils.translation import ugettext_lazy as _, ugettext
 from django.core.urlresolvers import NoReverseMatch, reverse
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models.base import ModelBase
-from django.utils.encoding import python_2_unicode_compatible, smart_text, smart_unicode
+from django.utils import six
+if six.PY3:
+    from django.utils.encoding import python_2_unicode_compatible, smart_text, smart_str as smart_unicode
+else:
+    from django.utils.encoding import python_2_unicode_compatible, smart_text, smart_unicode
 
 from django.db.models.signals import post_migrate
 from django.contrib.auth.models import Permission

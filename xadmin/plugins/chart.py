@@ -7,7 +7,11 @@ from django.template import loader
 from django.http import HttpResponseNotFound
 from django.core.serializers.json import DjangoJSONEncoder
 from django.http import HttpResponse
-from django.utils.encoding import smart_unicode
+from django.utils import six
+if six.PY3:
+    from django.utils.encoding import smart_text as smart_unicode
+else:
+    from django.utils.encoding import smart_unicode
 from django.db import models
 from django.utils.http import urlencode
 from django.utils.translation import ugettext_lazy as _, ugettext
@@ -116,7 +120,6 @@ class ChartsView(ListAdminView):
     def get(self, request, name):
         if name not in self.data_charts:
             return HttpResponseNotFound()
-
         self.chart = self.data_charts[name]
 
         self.x_field = self.chart['x-field']
@@ -134,7 +137,6 @@ class ChartsView(ListAdminView):
             for i, yfname in enumerate(self.y_fields):
                 yf, yattrs, yv = lookup_field(yfname, obj, self)
                 datas[i]["data"].append((value, yv))
-
         option = {'series': {'lines': {'show': True}, 'points': {'show': False}},
                   'grid': {'hoverable': True, 'clickable': True}}
         try:

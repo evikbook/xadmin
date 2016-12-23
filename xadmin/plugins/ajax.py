@@ -1,7 +1,11 @@
 from collections import OrderedDict
 from django.forms.utils import ErrorDict
 from django.utils.html import escape
-from django.utils.encoding import force_unicode
+from django.utils import six
+if six.PY3:
+    from django.utils.encoding import force_text as force_unicode
+else:
+    from django.utils.encoding import force_unicode
 from xadmin.sites import site
 from xadmin.views import BaseAdminPlugin, ListAdminView, ModelFormAdminView, DetailAdminView
 

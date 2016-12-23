@@ -73,7 +73,8 @@
             }
 
             template = el.html(template).text(); // decoded
-            template = $($.parseHTML(template));
+            template.replace(/(^[ \t]*\n)/gm, ""); // delete empty lines
+            template = $($.parseHTML(template)[1]);
 
             template.removeAttr('id');
             if(template.data("replace-id")){

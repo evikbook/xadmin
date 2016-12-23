@@ -5,7 +5,7 @@
 {% block box_content_attrs %}{% endblock box_content_attrs %}
 
 {% block formset_content %}
-  <table class="table">
+  <table class="table table-striped">
     <thead>
    {% for field in fields %}
      {% if not field.widget.is_hidden %}
@@ -18,6 +18,7 @@
        <th>{{ field.label }}</th>
    {% endfor %}
    {% if formset.formset.can_delete %}<th>&nbsp;</th>{% endif %}
+    {% if formset.show_detail_link %}<th>&nbsp;</th>{% endif %}
     </thead>
     <tbody class="formset-content" data-prefix="{{ prefix }}" data-style="stacked">
       {% for fs in formset.formset %}
@@ -26,9 +27,15 @@
         {% for r_o_f in fs.readonly_fields %}
             <td>{{ r_o_f.contents|safe }}</td>
         {% endfor %}
+
+        {% if fs.detail_link %}
+            <td><a href="{{ fs.detail_link }}" target="_blank"><i class="fa fa-eye"></i></a></td>
+        {% endif %}
+
         {% if formset.formset.can_delete %}
           <td><a class="delete-row"><i class="fa fa-times"></i></a></td>
         {% endif %}
+
       </tr>
       {% endfor %}
     </tbody>

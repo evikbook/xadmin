@@ -10,7 +10,9 @@ def get_context_dict(context):
     """
     if isinstance(context, RequestContext):
         ctx = {}
-        map(ctx.update, context.dicts)
+        for i in context.dicts:
+            for t in i:
+                ctx[t] = i[t]
     else:
         ctx = context
     return ctx

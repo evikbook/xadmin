@@ -1,6 +1,10 @@
 from django.db import models
 from django.core.exceptions import ImproperlyConfigured
-from django.utils.encoding import smart_unicode
+from django.utils import six
+if six.PY3:
+    from django.utils.encoding import smart_text as smart_unicode
+else:
+    from django.utils.encoding import smart_unicode
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 from django.template.loader import get_template
@@ -17,14 +21,22 @@ import datetime
 FILTER_PREFIX = '_p_'
 SEARCH_VAR = '_q_'
 
-from util import (get_model_from_relation,
+from .util import (get_model_from_relation,
     reverse_field_path, get_limit_choices_to_from_path, prepare_lookup_value)
 
 
 class BaseFilter(object):
     title = None
     template = 'xadmin/filters/list.html'
-
+    lookup_exact_val = None
+    lookup_isnull_name = None
+    lookup_since_name = None
+    lookup_until_name = None
+    lookup_in_val = []
+    lookup_in_name = None
+    lookup_year_val = False
+    lookup_month_val = True
+    lookup_exact_name = None
     @classmethod
     def test(cls, field, request, params, model, admin_view, field_path):
         pass

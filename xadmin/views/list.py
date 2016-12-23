@@ -5,7 +5,12 @@ from django.core.urlresolvers import NoReverseMatch
 from django.db import models
 from django.http import HttpResponseRedirect
 from django.template.response import SimpleTemplateResponse, TemplateResponse
-from django.utils.encoding import force_unicode, smart_unicode
+from django.utils import six
+if six.PY3:
+    from django.utils.encoding import force_text as force_unicode, \
+        smart_text as smart_unicode
+else:
+    from django.utils.encoding import force_unicode, smart_unicode
 from django.utils.html import escape, conditional_escape
 from django.utils.safestring import mark_safe
 from django.utils.text import capfirst
@@ -13,7 +18,7 @@ from django.utils.translation import ugettext as _
 
 from xadmin.util import lookup_field, display_for_field, label_for_field, boolean_icon
 
-from base import ModelAdminView, filter_hook, inclusion_tag, csrf_protect_m
+from .base import ModelAdminView, filter_hook, inclusion_tag, csrf_protect_m
 
 # List settings
 ALL_VAR = 'all'
@@ -166,6 +171,7 @@ class ListAdminView(ModelAdminView):
 
     def make_result_list(self):
         # Get search parameters from the query string.
+
         self.base_queryset = self.queryset()
         self.list_queryset = self.get_list_queryset()
         self.ordering_field_columns = self.get_ordering_field_columns()
@@ -173,7 +179,6 @@ class ListAdminView(ModelAdminView):
 
         # Get the number of objects, with admin filters applied.
         self.result_count = self.paginator.count
-
         # Get the total number of objects, with no admin filters applied.
         # Perform a slight optimization: Check to see whether any filters were
         # given. If not, use paginator.hits to calculate the number of objects,
@@ -402,10 +407,10 @@ class ListAdminView(ModelAdminView):
         """
         The 'change list' admin view for this model.
         """
+
         response = self.get_result_list()
         if response:
             return response
-
         context = self.get_context()
         context.update(kwargs or {})
 
@@ -459,7 +464,7 @@ class ListAdminView(ModelAdminView):
         if field_name in ordering_field_columns:
             sorted = True
             order_type = ordering_field_columns.get(field_name).lower()
-            sort_priority = ordering_field_columns.keys().index(field_name) + 1
+            sort_priority = list(ordering_field_columns.keys()).index(field_name) + 1
             th_classes.append('sorted %sending' % order_type)
             new_order_type = {'asc': 'desc', 'desc': 'asc'}[order_type]
 
@@ -652,6 +657,7 @@ class ListAdminView(ModelAdminView):
                     page_range.extend(range(page_num + 1, paginator.num_pages))
 
         need_show_all_link = self.can_show_all and not self.show_all and self.multi_page
+
         return {
             'cl': self,
             'pagination_required': pagination_required,

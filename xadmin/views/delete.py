@@ -2,7 +2,11 @@ from django.core.exceptions import PermissionDenied
 from django.db import transaction, router
 from django.http import Http404, HttpResponseRedirect
 from django.template.response import TemplateResponse
-from django.utils.encoding import force_unicode
+from django.utils import six
+if six.PY3:
+    from django.utils.encoding import force_text as force_unicode
+else:
+    from django.utils.encoding import force_unicode
 from django.utils.html import escape
 from django.utils.translation import ugettext as _
 from django.contrib.admin.utils import get_deleted_objects
@@ -39,7 +43,7 @@ class DeleteAdminView(ModelAdminView):
         context = self.get_context()
 
         return TemplateResponse(request, self.delete_confirmation_template or
-                                self.get_template_list("views/model_delete_confirm.html"), context, current_app=self.admin_site.name)
+                                self.get_template_list("views/model_delete_confirm.html"), context)
 
     @csrf_protect_m
     @transaction.atomic
@@ -51,7 +55,7 @@ class DeleteAdminView(ModelAdminView):
         self.delete_model()
 
         response = self.post_response()
-        if isinstance(response, basestring):
+        if isinstance(response, six.string_types):
             return HttpResponseRedirect(response)
         else:
             return response

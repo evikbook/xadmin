@@ -5,7 +5,11 @@ from django.db import router
 from django.http import HttpResponse, HttpResponseRedirect
 from django.template import loader
 from django.template.response import TemplateResponse
-from django.utils.encoding import force_unicode
+from django.utils import six
+if six.PY3:
+    from django.utils.encoding import force_text as force_unicode
+else:
+    from django.utils.encoding import force_unicode
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext as _, ungettext
 from django.utils.text import capfirst
@@ -126,7 +130,7 @@ class DeleteSelectedAction(BaseActionView):
 
         # Display the confirmation page
         return TemplateResponse(self.request, self.delete_selected_confirmation_template or
-                                self.get_template_list('views/model_delete_selected_confirm.html'), context, current_app=self.admin_site.name)
+                                self.get_template_list('views/model_delete_selected_confirm.html'), context)
 
 
 class ActionPlugin(BaseAdminPlugin):
@@ -242,7 +246,7 @@ class ActionPlugin(BaseAdminPlugin):
         tuple (name, description).
         """
         choices = []
-        for ac, name, description, icon in self.actions.itervalues():
+        for ac, name, description, icon in six.itervalues(self.actions):
             choice = (name, description % model_format_dict(self.opts), icon)
             choices.append(choice)
         return choices

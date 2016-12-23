@@ -3,7 +3,11 @@ from itertools import chain
 
 from django.core.urlresolvers import reverse
 from django.db.models.options import PROXY_PARENTS
-from django.utils.encoding import force_unicode
+from django.utils import six
+if six.PY3:
+    from django.utils.encoding import force_text as force_unicode
+else:
+    from django.utils.encoding import force_unicode
 from django.utils.encoding import smart_str
 from django.utils.safestring import mark_safe
 from django.db.models.sql.query import LOOKUP_SEP
@@ -208,7 +212,7 @@ class EditRelateDisplayPlugin(BaseRelateDisplayPlugin):
         return datas
 
     def post_response(self, response):
-        if isinstance(response, basestring) and response != self.get_admin_url('index'):
+        if isinstance(response, six.string_types) and response != self.get_admin_url('index'):
             return self._get_url(response)
         return response
 
@@ -224,7 +228,7 @@ class EditRelateDisplayPlugin(BaseRelateDisplayPlugin):
 class DeleteRelateDisplayPlugin(BaseRelateDisplayPlugin):
 
     def post_response(self, response):
-        if isinstance(response, basestring) and response != self.get_admin_url('index'):
+        if isinstance(response, six.string_types) and response != self.get_admin_url('index'):
             return self._get_url(response)
         return response
 

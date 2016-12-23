@@ -8,15 +8,20 @@ from django.utils import formats
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from django.utils.text import capfirst
-from django.utils.encoding import force_unicode, smart_unicode, smart_str
+from django.utils import six
+if six.PY3:
+    from django.utils.encoding import force_text as force_unicode, \
+        smart_text as smart_unicode, smart_str as smart_unicode
+else:
+    from django.utils.encoding import force_unicode, smart_unicode, smart_str
+
 from django.utils.translation import ungettext
 from django.core.urlresolvers import reverse
 from django.conf import settings
 from django.forms import Media
 from django.utils.translation import get_language
 from django.contrib.admin.utils import label_for_field, help_text_for_field
-import datetime
-import decimal
+
 
 if 'django.contrib.staticfiles' in settings.INSTALLED_APPS:
     from django.contrib.staticfiles.templatetags.staticfiles import static
@@ -35,7 +40,7 @@ except ImportError:
 
 
 def xstatic(*tags):
-    from vendors import vendors
+    from .vendors import vendors
     node = vendors
 
     fs = []
@@ -45,7 +50,7 @@ def xstatic(*tags):
         try:
             for p in tag.split('.'):
                 node = node[p]
-        except Exception, e:
+        except Exception as e:
             if tag.startswith('xadmin'):
                 file_type = tag.split('.')[-1]
                 if file_type in ('css', 'js'):
@@ -55,7 +60,7 @@ def xstatic(*tags):
             else:
                 raise e
 
-        if type(node) in (str, unicode):
+        if type(node) in (str, six.text_type):
             files = node
         else:
             mode = 'dev'
@@ -124,7 +129,7 @@ def quote(s):
     quoting is slightly different so that it doesn't get automatically
     unquoted by the Web browser.
     """
-    if not isinstance(s, basestring):
+    if not isinstance(s, six.string_types):
         return s
     res = list(s)
     for i in range(len(res)):
@@ -138,7 +143,7 @@ def unquote(s):
     """
     Undo the effects of quote(). Based heavily on urllib.unquote().
     """
-    if not isinstance(s, basestring):
+    if not isinstance(s, six.string_types):
         return s
     mychr = chr
     myatoi = int
@@ -187,7 +192,7 @@ class NestedObjects(Collector):
                 self.add_edge(None, obj)
         try:
             return super(NestedObjects, self).collect(objs, source_attr=source_attr, **kwargs)
-        except models.ProtectedError, e:
+        except models.ProtectedError as e:
             self.protected.update(e.protected_objects)
 
     def related_objects(self, related, objs):
@@ -259,12 +264,14 @@ def model_ngettext(obj, n=None):
     singular, plural = d["verbose_name"], d["verbose_name_plural"]
     return ungettext(singular, plural, n or 0)
 
+
 def is_rel_field(name,model):
     if hasattr(name,'split') and name.find("__")>0:
         parts = name.split("__")
         if parts[0] in model._meta.get_all_field_names():
             return True
     return False
+
 
 def lookup_field(name, obj, model_admin=None):
     opts = obj._meta
@@ -299,14 +306,17 @@ def lookup_field(name, obj, model_admin=None):
     return f, attr, value
 
 
-
 def admin_urlname(value, arg):
     return 'xadmin:%s_%s_%s' % (value.app_label, value.model_name, arg)
 
 
 def boolean_icon(field_val):
     return mark_safe(u'<i class="%s" alt="%s"></i>' % (
-        {True: 'fa fa-check-circle text-success', False: 'fa fa-times-circle text-error', None: 'fa fa-question-circle muted'}[field_val], field_val))
+        {
+            True: 'fa fa-check-circle text-success',
+            False: 'fa fa-times-circle text-error',
+            None: 'fa fa-question-circle muted'
+        }[field_val], field_val))
 
 
 def display_for_field(value, field):
@@ -353,6 +363,7 @@ def display_for_value(value, boolean=False):
 
 class NotRelationField(Exception):
     pass
+
 
 def get_model_from_relation(field):
     if is_related_field(field):
@@ -442,6 +453,7 @@ def get_limit_choices_to_from_path(model, path):
     else:
         return models.Q(**limit_choices_to)  # convert dict to Q
 
+
 def sortkeypicker(keynames):
     negate = set()
     for i, k in enumerate(keynames):
@@ -456,8 +468,23 @@ def sortkeypicker(keynames):
         return composite
     return getit
 
+
 def is_related_field(field):
     return isinstance(field, ForeignObjectRel)
 
+
 def is_related_field2(field):
-    return (hasattr(field, 'rel') and field.rel!=None) or is_related_field(field)
+    return (hasattr(field, 'rel') and field.rel is not None) or is_related_field(field)
+
+
+def get_url_by_menu(menu, out_urls_list=None):
+    out_urls_list = out_urls_list or list()
+
+    if 'url' in menu:
+        out_urls_list.append(menu['url'])
+
+    if 'menus' in menu:
+        for m in menu['menus']:
+            get_url_by_menu(m, out_urls_list)
+
+    return out_urls_list

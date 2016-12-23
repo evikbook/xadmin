@@ -8,7 +8,11 @@ from django.forms.models import model_to_dict
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.template.response import TemplateResponse
-from django.utils.encoding import force_unicode
+from django.utils import six
+if six.PY3:
+    from django.utils.encoding import force_text as force_unicode
+else:
+    from django.utils.encoding import force_unicode
 from django.utils.safestring import mark_safe
 from django.utils.text import capfirst
 from django.utils.translation import ugettext as _
@@ -204,7 +208,7 @@ class RecoverListView(BaseReversionView):
         return TemplateResponse(
             request, self.recover_list_template or self.get_template_list(
                 "views/recover_list.html"),
-            context, current_app=self.admin_site.name)
+            context)
 
 
 class RevisionListView(BaseReversionView):
@@ -259,7 +263,7 @@ class RevisionListView(BaseReversionView):
         context = self.get_context()
 
         return TemplateResponse(self.request, self.object_history_template or
-                                self.get_template_list('views/model_history.html'), context, current_app=self.admin_site.name)
+                                self.get_template_list('views/model_history.html'), context)
 
     def get_version_object(self, version):
         obj_version = version._object_version
@@ -340,7 +344,7 @@ class RevisionListView(BaseReversionView):
 
         return TemplateResponse(
             self.request, self.revision_diff_template or self.get_template_list('views/revision_diff.html'),
-            context, current_app=self.admin_site.name)
+            context)
 
     @filter_hook
     def get_media(self):
@@ -433,12 +437,12 @@ class RevisionView(BaseRevisionView):
         return TemplateResponse(
             self.request, form_template or self.get_template_list(
                 'views/revision_form.html'),
-            context, current_app=self.admin_site.name)
+            context)
 
     @filter_hook
     def post_response(self):
         self.message_user(_('The %(model)s "%(name)s" was reverted successfully. You may edit it again below.') %
-                          {"model": force_unicode(self.opts.verbose_name), "name": unicode(self.new_obj)}, 'success')
+                          {"model": force_unicode(self.opts.verbose_name), "name": six.u(self.new_obj)}, 'success')
         return HttpResponseRedirect(self.model_admin_url('change', self.new_obj.pk))
 
 
@@ -470,12 +474,12 @@ class RecoverView(BaseRevisionView):
         return TemplateResponse(
             self.request, form_template or self.get_template_list(
                 'views/recover_form.html'),
-            context, current_app=self.admin_site.name)
+            context)
 
     @filter_hook
     def post_response(self):
         self.message_user(_('The %(model)s "%(name)s" was recovered successfully. You may edit it again below.') %
-                          {"model": force_unicode(self.opts.verbose_name), "name": unicode(self.new_obj)}, 'success')
+                          {"model": force_unicode(self.opts.verbose_name), "name": six.u(self.new_obj)}, 'success')
         return HttpResponseRedirect(self.model_admin_url('change', self.new_obj.pk))
 
 
@@ -521,7 +525,7 @@ class InlineRevisionPlugin(BaseAdminPlugin):
         related_versions = dict([(related_version.object_id, related_version)
                                  for related_version in revision_versions
                                  if ContentType.objects.get_for_id(related_version.content_type_id).model_class() == formset.model
-                                 and unicode(related_version.field_dict[fk_name]) == unicode(object_id)])
+                                 and six.u(related_version.field_dict[fk_name]) == six.u(object_id)])
         return related_versions
 
     def _hack_inline_formset_initial(self, revision_view, formset):
@@ -532,7 +536,7 @@ class InlineRevisionPlugin(BaseAdminPlugin):
             revision_view.org_obj, revision_view.version, formset)
         formset.related_versions = related_versions
         for related_obj in formset.queryset:
-            if unicode(related_obj.pk) in related_versions:
+            if six.u(related_obj.pk) in related_versions:
                 initial.append(
                     related_versions.pop(unicode(related_obj.pk)).field_dict)
             else:
@@ -563,7 +567,7 @@ class InlineRevisionPlugin(BaseAdminPlugin):
 
         if self.request.method == 'GET' and formset.helper and formset.helper.layout:
             helper = formset.helper
-            helper.filter(basestring).wrap(InlineDiffField)
+            helper.filter(six.string_types).wrap(InlineDiffField)
             fake_admin_class = type(str('%s%sFakeAdmin' % (self.opts.app_label, self.opts.model_name)), (object, ), {'model': self.model})
             for form in formset.forms:
                 instance = form.instance

@@ -7,7 +7,11 @@ from django.db import models, transaction
 from django.forms.models import modelform_factory
 from django.http import Http404, HttpResponseRedirect
 from django.template.response import TemplateResponse
-from django.utils.encoding import force_unicode
+from django.utils import six
+if six.PY3:
+    from django.utils.encoding import force_text as force_unicode
+else:
+    from django.utils.encoding import force_unicode
 from django.utils.html import escape
 from django.template import loader
 from django.utils.translation import ugettext as _
@@ -16,7 +20,7 @@ from xadmin.layout import FormHelper, Layout, Fieldset, TabHolder, Container, Co
 from xadmin.util import unquote
 from xadmin.views.detail import DetailAdminUtil
 
-from base import CommAdminView, filter_hook, csrf_protect_m
+from .base import CommAdminView, filter_hook, csrf_protect_m
 
 class FormAdminView(CommAdminView):
     form = forms.ModelForm
@@ -110,7 +114,7 @@ class FormAdminView(CommAdminView):
         if self.valid_forms():
             self.save_forms()
             response = self.post_response()
-            if isinstance(response, basestring):
+            if isinstance(response, six.string_types):
                 return HttpResponseRedirect(response)
             else:
                 return response
@@ -156,7 +160,7 @@ class FormAdminView(CommAdminView):
 
         return TemplateResponse(
             self.request, self.form_template,
-            context, current_app=self.admin_site.name)
+            context)
 
     @filter_hook
     def post_response(self):

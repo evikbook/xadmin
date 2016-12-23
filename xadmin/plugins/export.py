@@ -1,10 +1,16 @@
-import StringIO
 import datetime
 import sys
 
 from django.http import HttpResponse
 from django.template import loader
-from django.utils.encoding import force_unicode, smart_unicode
+from django.utils import six
+if six.PY3:
+    from io import StringIO
+    from django.utils.encoding import force_text as force_unicode, \
+        smart_text as smart_unicode
+else:
+    import StringIO
+    from django.utils.encoding import force_unicode, smart_unicode
 from django.utils.html import escape
 from django.utils.translation import ugettext as _
 from django.utils.xmlutils import SimplerXMLGenerator
@@ -164,7 +170,7 @@ class ExportPlugin(BaseAdminPlugin):
         if isinstance(t, bool):
             return _('Yes') if t else _('No')
         t = t.replace('"', '""').replace(',', '\,')
-        if isinstance(t, basestring):
+        if isinstance(t, six.string_types):
             t = '"%s"' % t
         return t
 
@@ -187,7 +193,7 @@ class ExportPlugin(BaseAdminPlugin):
                 self._to_xml(xml, item)
                 xml.endElement("row")
         elif isinstance(data, dict):
-            for key, value in data.iteritems():
+            for key, value in six.iteritems(data):
                 key = key.replace(' ', '_')
                 xml.startElement(key, {})
                 self._to_xml(xml, value)

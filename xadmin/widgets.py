@@ -4,12 +4,16 @@ Form Widget classes specific to the Django admin site.
 from itertools import chain
 from django import forms
 from django.forms.widgets import RadioFieldRenderer, RadioChoiceInput
-from django.utils.encoding import force_unicode
+from django.utils import six
+if six.PY3:
+    from django.utils.encoding import force_text as force_unicode
+else:
+    from django.utils.encoding import force_unicode
 from django.utils.safestring import mark_safe
 from django.utils.html import conditional_escape
 from django.utils.translation import ugettext as _
 
-from util import vendor
+from .util import vendor
 
 
 class AdminDateWidget(forms.DateInput):

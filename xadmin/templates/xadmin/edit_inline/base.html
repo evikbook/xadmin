@@ -6,7 +6,7 @@
 
 {% block box_title %}
   {% if not formset.formset.detail_page %}
-  {% if has_add_permission %}
+  {% if formset.has_add_permission %}
   <a class="add-row" id="{{ prefix }}-add-row" href="javascript:void(0)"><i class="icon fa fa-plus"></i></a>
   {% endif %}
   {% endif %}
@@ -17,8 +17,8 @@
 {% block box_content_attrs %}id="{{ formset.css_id }}-{{inline_style}}" data-prefix="{{ prefix }}" data-style="{{inline_style}}"{% endblock box_content_attrs %}
 
 {% block box_content %}
-  {% if not formset.formset.detail_page %}
   {{ formset.formset.management_form }}
+  {% if not formset.formset.detail_page %}
   {{ formset.formset.non_form_errors }}
   {% endif %}
   {% block formset_content %}

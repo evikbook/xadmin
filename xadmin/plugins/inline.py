@@ -1,5 +1,6 @@
 import copy
 import inspect
+from django.utils import six
 from django import forms
 from django.forms.formsets import all_valid, DELETION_FIELD_NAME
 from django.forms.models import inlineformset_factory, BaseInlineFormSet, modelform_defines_fields
@@ -116,7 +117,7 @@ def replace_field_to_value(layout, av):
         for i, lo in enumerate(layout.fields):
             if isinstance(lo, Field) or issubclass(lo.__class__, Field):
                 layout.fields[i] = ShowField(av, *lo.fields, **lo.attrs)
-            elif isinstance(lo, basestring):
+            elif isinstance(lo, six.string_types):
                 layout.fields[i] = ShowField(av, lo)
             elif hasattr(lo, 'get_field_names'):
                 replace_field_to_value(lo, av)
@@ -130,8 +131,10 @@ class InlineModelAdmin(ModelFormAdminView):
     max_num = None
     can_delete = True
     fields = []
+    exclude = []
     admin_view = None
     style = 'stacked'
+    show_detail_link = False
 
     def init(self, admin_view):
         self.admin_view = admin_view
@@ -144,16 +147,19 @@ class InlineModelAdmin(ModelFormAdminView):
     @filter_hook
     def get_formset(self, **kwargs):
         """Returns a BaseInlineFormSet class for use in admin add/change views."""
-        if self.exclude is None:
-            exclude = []
-        else:
-            exclude = list(self.exclude)
+        exclude = self.exclude or list()
         exclude.extend(self.get_readonly_fields())
+
         if self.exclude is None and hasattr(self.form, '_meta') and self.form._meta.exclude:
             # Take the custom ModelForm's Meta.exclude into account only if the
             # InlineModelAdmin doesn't define its own.
             exclude.extend(self.form._meta.exclude)
         # if exclude is an empty list we use None, since that's the actual
+        if self.fields:
+            exclude.extend(set([field.name for field in self.model._meta.fields]) - set(self.fields))
+            if 'id' in exclude:
+                exclude.remove('id')
+
         # default
         exclude = exclude or None
         can_delete = self.can_delete and self.has_delete_permission()
@@ -224,20 +230,30 @@ class InlineModelAdmin(ModelFormAdminView):
                 form.readonly_fields = []
                 inst = form.save(commit=False)
                 if inst:
+                    field_names = [f.name for f in inst._meta.get_fields()]
                     for readonly_field in readonly_fields:
                         value = None
                         label = None
-                        if readonly_field in inst._meta.get_all_field_names():
+                        if readonly_field in field_names:
                             label = inst._meta.get_field(readonly_field).verbose_name
-                            value = unicode(getattr(inst, readonly_field))
+                            value = six.u(getattr(inst, readonly_field))
                         elif inspect.ismethod(getattr(inst, readonly_field, None)):
                             value = getattr(inst, readonly_field)()
                             label = getattr(getattr(inst, readonly_field), 'short_description', readonly_field)
                         elif inspect.ismethod(getattr(self, readonly_field, None)):
                             value = getattr(self, readonly_field)(inst)
                             label = getattr(getattr(self, readonly_field), 'short_description', readonly_field)
-                        if value:
+                        if label is not None:  # Allow values of False/0 to show up
                             form.readonly_fields.append({'label': label, 'contents': value})
+
+        if self.show_detail_link:
+            # added detail link to forms
+            for form in instance.forms:
+                if not form.instance.pk:
+                    continue
+
+                form.detail_link = self.get_detail_url(form.instance.pk)
+
         return instance
 
     def has_auto_field(self, form):
@@ -278,6 +294,14 @@ class InlineModelAdmin(ModelFormAdminView):
 
         codename = get_permission_codename('delete', self.opts)
         return self.user.has_perm("%s.%s" % (self.opts.app_label, codename))
+
+    def get_detail_url(self, pk):
+        if not self.show_detail_link or self.model not in self.admin_site._registry.keys():
+            return
+        app_label = self.model._meta.app_label
+        model_name = self.model._meta.model_name
+
+        return self.get_admin_url('{}_{}_change'.format(app_label, model_name), pk)
 
 
 class GenericInlineModelAdmin(InlineModelAdmin):
@@ -433,11 +457,7 @@ class InlineFormsetPlugin(BaseAdminPlugin):
         replace_inline_objects(layout, fs)
 
         if fs:
-            container = get_first_field(layout, Column)
-            if not container:
-                container = get_first_field(layout, Container)
-            if not container:
-                container = layout
+            container = get_first_field(layout, Column) or get_first_field(layout, Container) or layout
 
             # fixed #176 bug, change dict to list
             for key, value in fs:
@@ -456,16 +476,16 @@ class InlineFormsetPlugin(BaseAdminPlugin):
     def _get_detail_formset_instance(self, inline):
         formset = inline.instance_form(extra=0, max_num=0, can_delete=0)
         formset.detail_page = True
-        if True:
-            replace_field_to_value(formset.helper.layout, inline)
-            model = inline.model
-            opts = model._meta
-            fake_admin_class = type(str('%s%sFakeAdmin' % (opts.app_label, opts.model_name)), (object, ), {'model': model})
-            for form in formset.forms:
-                instance = form.instance
-                if instance.pk:
-                    form.detail = self.get_view(
-                        DetailAdminUtil, fake_admin_class, instance)
+
+        replace_field_to_value(formset.helper.layout, inline)
+        model = inline.model
+        opts = model._meta
+        fake_admin_class = type(str('%s%sFakeAdmin' % (opts.app_label, opts.model_name)), (object,), {'model': model})
+        for form in formset.forms:
+            instance = form.instance
+            if instance.pk:
+                form.detail = self.get_view(
+                    DetailAdminUtil, fake_admin_class, instance)
         return formset
 
 class DetailAdminUtil(DetailAdminView):
