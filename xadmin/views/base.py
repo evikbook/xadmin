@@ -478,13 +478,13 @@ class CommAdminView(BaseAdminView):
 
         def check_selected(menu, path):
             selected = False
-            if 'url' in menu:
+            if menu is not None and 'url' in menu:
                 chop_index = menu['url'].find('?')
                 if chop_index == -1:
                     selected = path.startswith(menu['url'])
                 else:
                     selected = path.startswith(menu['url'][:chop_index])
-            if 'menus' in menu:
+            if menu is not None and 'menus' in menu:
                 for m in menu['menus']:
                     _s = check_selected(m, path)
                     if _s:
