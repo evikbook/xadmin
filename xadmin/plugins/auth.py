@@ -11,7 +11,7 @@ from django.utils.html import escape
 from django.utils.translation import ugettext as _
 from django.views.decorators.debug import sensitive_post_parameters
 from django.forms import ModelMultipleChoiceField
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from xadmin.layout import Fieldset, Main, Side, Row, FormHelper
 from xadmin.sites import site
 from xadmin.util import unquote
@@ -116,7 +116,7 @@ class PermissionAdmin(object):
     list_display = ('show_name', )
 
 site.register(Group, GroupAdmin)
-site.register(User, UserAdmin)
+site.register(get_user_model(), UserAdmin)
 site.register(Permission, PermissionAdmin)
 
 
