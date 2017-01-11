@@ -17,6 +17,7 @@ from xadmin.sites import site
 from xadmin.util import unquote
 from xadmin.views import BaseAdminPlugin, ModelFormAdminView, ModelAdminView, CommAdminView, csrf_protect_m
 
+User = get_user_model()
 
 ACTION_NAME = {
     'add': _('Can add %s'),
@@ -116,7 +117,7 @@ class PermissionAdmin(object):
     list_display = ('show_name', )
 
 site.register(Group, GroupAdmin)
-site.register(get_user_model(), UserAdmin)
+site.register(User, UserAdmin)
 site.register(Permission, PermissionAdmin)
 
 
