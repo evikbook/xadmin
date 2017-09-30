@@ -3,17 +3,141 @@ Form Widget classes specific to the Django admin site.
 """
 from itertools import chain
 from django import forms
-from django.forms.widgets import RadioFieldRenderer, RadioChoiceInput
+
+from django.utils.encoding import force_text, python_2_unicode_compatible
 from django.utils import six
 if six.PY3:
     from django.utils.encoding import force_text as force_unicode
 else:
     from django.utils.encoding import force_unicode
 from django.utils.safestring import mark_safe
-from django.utils.html import conditional_escape
 from django.utils.translation import ugettext as _
+from django.utils.html import conditional_escape, format_html, format_html_join
 
 from .util import vendor
+
+
+def flatatt(attrs):
+    """
+    Convert a dictionary of attributes to a single string.
+    The returned string will contain a leading space followed by key="value",
+    XML-style pairs.  It is assumed that the keys do not need to be XML-escaped.
+    If the passed dictionary is empty, then return an empty string.
+
+    The result is passed through 'mark_safe'.
+    """
+    return format_html_join('', ' {0}="{1}"', sorted(attrs.items()))
+
+
+@python_2_unicode_compatible
+class SubWidget(object):
+    """
+    Some widgets are made of multiple HTML elements -- namely, RadioSelect.
+    This is a class that represents the "inner" HTML element of a widget.
+    """
+    def __init__(self, parent_widget, name, value, attrs, choices):
+        self.parent_widget = parent_widget
+        self.name, self.value = name, value
+        self.attrs, self.choices = attrs, choices
+
+    def __str__(self):
+        args = [self.name, self.value, self.attrs]
+        if self.choices:
+            args.append(self.choices)
+        return self.parent_widget.render(*args)
+
+
+@python_2_unicode_compatible
+class ChoiceInput(SubWidget):
+    """
+    An object used by ChoiceFieldRenderer that represents a single
+    <input type='$input_type'>.
+    """
+    input_type = None  # Subclasses must define this
+
+    def __init__(self, name, value, attrs, choice, index):
+        self.name = name
+        self.value = value
+        self.attrs = attrs
+        self.choice_value = force_text(choice[0])
+        self.choice_label = force_text(choice[1])
+        self.index = index
+
+    def __str__(self):
+        return self.render()
+
+    def render(self, name=None, value=None, attrs=None, choices=()):
+        name = name or self.name
+        value = value or self.value
+        attrs = attrs or self.attrs
+        if 'id' in self.attrs:
+            label_for = format_html(' for="{0}_{1}"', self.attrs['id'], self.index)
+        else:
+            label_for = ''
+        return format_html('<label{0}>{1} {2}</label>', label_for, self.tag(), self.choice_label)
+
+    def is_checked(self):
+        return self.value == self.choice_value
+
+    def tag(self):
+        if 'id' in self.attrs:
+            self.attrs['id'] = '%s_%s' % (self.attrs['id'], self.index)
+        final_attrs = dict(self.attrs, type=self.input_type, name=self.name, value=self.choice_value)
+        if self.is_checked():
+            final_attrs['checked'] = 'checked'
+        return format_html('<input{0} />', flatatt(final_attrs))
+
+
+@python_2_unicode_compatible
+class ChoiceFieldRenderer(object):
+    """
+    An object used by RadioSelect to enable customization of radio widgets.
+    """
+
+    choice_input_class = None
+
+    def __init__(self, name, value, attrs, choices):
+        self.name = name
+        self.value = value
+        self.attrs = attrs
+        self.choices = choices
+
+    def __iter__(self):
+        for i, choice in enumerate(self.choices):
+            yield self.choice_input_class(self.name, self.value, self.attrs.copy(), choice, i)
+
+    def __getitem__(self, idx):
+        choice = self.choices[idx] # Let the IndexError propogate
+        return self.choice_input_class(self.name, self.value, self.attrs.copy(), choice, idx)
+
+    def __str__(self):
+        return self.render()
+
+    def render(self):
+        """
+        Outputs a <ul> for this set of choice fields.
+        If an id was given to the field, it is applied to the <ul> (each
+        item in the list will get an id of `$id_$i`).
+        """
+        id_ = self.attrs.get('id', None)
+        start_tag = format_html('<ul id="{0}">', id_) if id_ else '<ul>'
+        output = [start_tag]
+        for widget in self:
+            output.append(format_html('<li>{0}</li>', force_text(widget)))
+        output.append('</ul>')
+        return mark_safe('\n'.join(output))
+
+
+class RadioChoiceInput(ChoiceInput):
+    input_type = 'radio'
+
+    def __init__(self, *args, **kwargs):
+        super(RadioChoiceInput, self).__init__(*args, **kwargs)
+        self.value = force_text(self.value)
+
+
+class RadioFieldRenderer(ChoiceFieldRenderer):
+    choice_input_class = RadioChoiceInput
 
 
 class AdminDateWidget(forms.DateInput):
@@ -151,9 +275,9 @@ class AdminSelectMultiple(forms.SelectMultiple):
 
 class AdminFileWidget(forms.ClearableFileInput):
     template_with_initial = (u'<p class="file-upload">%s</p>'
-                             % forms.ClearableFileInput.template_with_initial)
+                             %  '%(initial_text)s: %(initial)s %(clear_template)s<br />%(input_text)s: %(input)s')
     template_with_clear = (u'<span class="clearable-file-input">%s</span>'
-                           % forms.ClearableFileInput.template_with_clear)
+                           % '%(clear)s <label for="%(clear_checkbox_id)s">%(clear_checkbox_label)s</label>')
 
 
 class AdminTextareaWidget(forms.Textarea):
