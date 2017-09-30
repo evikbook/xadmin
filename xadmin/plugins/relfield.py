@@ -32,11 +32,12 @@ class ForeignKeySearchWidget(forms.Widget):
             for i in list(self.rel.limit_choices_to):
                 attrs['data-choices'] += "&_p_%s=%s" % (i, self.rel.limit_choices_to[i])
             attrs['data-choices'] = format_html(attrs['data-choices'])
-
+        if 'name' in kwargs:
+            kwargs.pop('name')
         return super(ForeignKeySearchWidget, self).build_attrs(attrs, **kwargs)
 
     def render(self, name, value, attrs=None):
-        final_attrs = self.build_attrs(attrs, name=name)
+        final_attrs = self.build_attrs(attrs)
         output = [format_html('<select{0}>', flatatt(final_attrs))]
         if value:
             output.append(format_html('<option selected="selected" value="{0}">{1}</option>', value, self.label_for_value(value)))
@@ -55,6 +56,7 @@ class ForeignKeySearchWidget(forms.Widget):
     @property
     def media(self):
         return vendor('select.js', 'select.css', 'xadmin.widget.select.js')
+
 
 class ForeignKeySelectWidget(ForeignKeySearchWidget):
 

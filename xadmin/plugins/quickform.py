@@ -88,12 +88,14 @@ class RelatedFieldWidgetWrapper(forms.Widget):
                     name, self.detail_url
                     ))
 
+        kwargs.pop('renderer')
         output.extend(['<div class="control-wrap" id="id_%s_wrap_container">' % name,
                   self.widget.render(name, value, *args, **kwargs), '</div>'])
         return mark_safe(u''.join(output))
 
     def build_attrs(self, extra_attrs=None, **kwargs):
         "Helper function for building an attribute dictionary."
+        kwargs.pop('name')
         self.attrs = self.widget.build_attrs(extra_attrs=None, **kwargs)
         return self.attrs
 

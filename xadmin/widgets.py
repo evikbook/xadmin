@@ -239,7 +239,7 @@ class AdminCheckboxSelect(forms.CheckboxSelectMultiple):
         if value is None:
             value = []
         has_id = attrs and 'id' in attrs
-        final_attrs = self.build_attrs(attrs, name=name)
+        final_attrs = self.build_attrs(attrs)
         output = []
         # Normalize to strings
         str_values = set([force_unicode(v) for v in value])
