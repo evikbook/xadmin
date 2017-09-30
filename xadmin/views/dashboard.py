@@ -299,8 +299,11 @@ class ModelChoiceField(forms.ChoiceField):
     def to_python(self, value):
         if isinstance(value, ModelBase):
             return value
-        app_label, model_name = value.lower().split('.')
-        return apps.get_model(app_label, model_name)
+        try:
+            app_label, model_name = value.lower().split('.')
+            return apps.get_model(app_label, model_name)
+        except ValueError:
+            return apps.get_model(app_label)
 
     def prepare_value(self, value):
         if isinstance(value, ModelBase):
